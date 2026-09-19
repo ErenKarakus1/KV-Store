@@ -47,6 +47,15 @@ func (s *Store) deleteLocked(key string) bool {
 	return true
 }
 
+func (s *Store) evictLRULocked() bool {
+	oldest := s.lru.Back()
+	if oldest == nil {
+		return false
+	}
+	key := oldest.Value.(string)
+	return s.deleteLocked(key)
+}
+
 func (s *Store) Set(key, value string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -59,6 +68,9 @@ func (s *Store) Set(key, value string) {
 			lruNode:   node,
 		}
 		s.data[key] = &e
+		if s.capacity > 0 && len(s.data) > s.capacity {
+			s.evictLRULocked()
+		}
 	} else {
 		currentEntry.hasExpiry = false
 		currentEntry.value = value
