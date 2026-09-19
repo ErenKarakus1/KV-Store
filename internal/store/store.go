@@ -37,6 +37,16 @@ func NewStore(capacity int) *Store {
 	}
 }
 
+func (s *Store) deleteLocked(key string) bool {
+	e, ok := s.data[key]
+	if !ok {
+		return false
+	}
+	s.lru.Remove(e.lruNode)
+	delete(s.data, key)
+	return true
+}
+
 func (s *Store) Set(key, value string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -68,21 +78,14 @@ func (s *Store) Get(key string) (string, bool) {
 		s.lru.MoveToFront(e.lruNode)
 		return e.value, true
 	}
-	s.lru.Remove(e.lruNode)
-	delete(s.data, key)
+	s.deleteLocked(key)
 	return "", false
 }
 
 func (s *Store) Delete(key string) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	e, ok := s.data[key]
-	if !ok {
-		return false
-	}
-	s.lru.Remove(e.lruNode)
-	delete(s.data, key)
-	return true
+	return s.deleteLocked(key)
 }
 
 func (s *Store) Exists(key string) bool {
@@ -95,7 +98,6 @@ func (s *Store) Exists(key string) bool {
 	if !e.hasExpiry || e.expiresAt.After(time.Now()) {
 		return true
 	}
-	s.lru.Remove(e.lruNode)
-	delete(s.data, key)
+	s.deleteLocked(key)
 	return false
 }
