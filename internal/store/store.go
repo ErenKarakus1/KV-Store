@@ -113,3 +113,33 @@ func (s *Store) Exists(key string) bool {
 	s.deleteLocked(key)
 	return false
 }
+
+func (s *Store) SetWithTTL(key, value string, ttl time.Duration) bool {
+	if ttl <= 0 {
+		return false
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	expiresAt := time.Now().Add(ttl)
+	e, ok := s.data[key]
+	if !ok {
+		node := s.lru.PushFront(key)
+		newEntry := entry{
+			key:       key,
+			value:     value,
+			hasExpiry: true,
+			lruNode:   node,
+			expiresAt: expiresAt,
+		}
+		s.data[key] = &newEntry
+		if s.capacity > 0 && len(s.data) > s.capacity {
+			s.evictLRULocked()
+		}
+		return true
+	}
+	e.value = value
+	e.hasExpiry = true
+	e.expiresAt = expiresAt
+	s.lru.MoveToFront(e.lruNode)
+	return true
+}
