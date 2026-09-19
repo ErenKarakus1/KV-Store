@@ -198,3 +198,26 @@ func (s *Store) cleanupExpiredLocked(now time.Time) {
 		s.deleteLocked(item.key)
 	}
 }
+
+func (s *Store) StartCleanup(interval time.Duration) func() {
+	if interval <= 0 {
+		return func() {}
+	}
+	ticker := time.NewTicker(interval)
+	done := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				s.mu.Lock()
+				s.cleanupExpiredLocked(time.Now())
+				s.mu.Unlock()
+			case <-done:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+	var once sync.Once
+	return func() { once.Do(func() { close(done) }) }
+}
