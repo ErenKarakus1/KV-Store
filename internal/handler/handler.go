@@ -2,7 +2,9 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/ErenKarakus1/KV-Store/internal/model"
 	"github.com/ErenKarakus1/KV-Store/internal/store"
 	"github.com/gin-gonic/gin"
 )
@@ -20,5 +22,40 @@ func GetHandler(s *store.Store) gin.HandlerFunc {
 			return
 		}
 		ctx.JSON(http.StatusOK, gin.H{"key": key, "value": value})
+	}
+}
+
+func SetHandler(s *store.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		key := ctx.Param("key")
+		if key == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+			return
+		}
+		var req model.SetRequest
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+		if req.Value == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "value is required"})
+			return
+		}
+		if req.TTL == "" {
+			s.Set(key, req.Value)
+			ctx.JSON(http.StatusOK, gin.H{"key": key, "value": req.Value})
+			return
+		}
+		duration, err := time.ParseDuration(req.TTL)
+		if err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid ttl"})
+			return
+		}
+		ok := s.SetWithTTL(key, req.Value, duration)
+		if !ok {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid ttl"})
+			return
+		}
+		ctx.JSON(http.StatusOK, gin.H{"key": key, "value": req.Value, "ttl": req.TTL})
 	}
 }

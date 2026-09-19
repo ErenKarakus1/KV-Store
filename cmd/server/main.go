@@ -19,6 +19,7 @@ func main() {
 	s := store.NewStore(storeCapacity)
 	router := gin.Default()
 	router.GET("/kv/:key", handler.GetHandler(s))
+	router.PUT("/kv/:key", handler.SetHandler(s))
 	if err := router.Run(":" + cfg.Port); err != nil {
 		log.Fatal(err)
 	}
