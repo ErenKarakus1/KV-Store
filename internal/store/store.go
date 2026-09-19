@@ -28,3 +28,31 @@ type Store struct {
 	lru        *list.List
 	capacity   int
 }
+
+func NewStore(capacity int) *Store {
+	return &Store{
+		data:     make(map[string]*entry),
+		lru:      list.New(),
+		capacity: capacity,
+	}
+}
+
+func (s *Store) Set(key, value string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if currentEntry, ok := s.data[key]; !ok {
+		node := s.lru.PushFront(key)
+		e := entry{
+			key:       key,
+			value:     value,
+			hasExpiry: false,
+			lruNode:   node,
+		}
+		s.data[key] = &e
+	} else {
+		currentEntry.hasExpiry = false
+		currentEntry.value = value
+		currentEntry.expiresAt = time.Time{}
+		s.lru.MoveToFront(currentEntry.lruNode)
+	}
+}
