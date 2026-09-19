@@ -75,3 +75,15 @@ func DeleteHandler(s *store.Store) gin.HandlerFunc {
 		ctx.Status(http.StatusNoContent)
 	}
 }
+
+func ExistsHandler(s *store.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		key := ctx.Param("key")
+		if key == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+			return
+		}
+		exists := s.Exists(key)
+		ctx.JSON(http.StatusOK, gin.H{"key": key, "exists": exists})
+	}
+}
