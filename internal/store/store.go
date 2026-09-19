@@ -1,12 +1,38 @@
 package store
 
 import (
+	"container/heap"
 	"container/list"
 	"sync"
 	"time"
 )
 
 type expiryHeap []expiryItem
+
+func (h expiryHeap) Len() int {
+	return len(h)
+}
+
+func (h expiryHeap) Less(i, j int) bool {
+	return h[i].expiresAt.Before(h[j].expiresAt)
+}
+
+func (h expiryHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+}
+
+func (h *expiryHeap) Push(x any) {
+	item := x.(expiryItem)
+	*h = append(*h, item)
+}
+
+func (h *expiryHeap) Pop() any {
+	old := *h
+	n := len(old)
+	x := old[n-1]
+	*h = old[0 : n-1]
+	return x
+}
 
 type expiryItem struct {
 	key       string
@@ -132,6 +158,7 @@ func (s *Store) SetWithTTL(key, value string, ttl time.Duration) bool {
 			expiresAt: expiresAt,
 		}
 		s.data[key] = &newEntry
+		heap.Push(&s.expiryHeap, expiryItem{key: key, expiresAt: expiresAt})
 		if s.capacity > 0 && len(s.data) > s.capacity {
 			s.evictLRULocked()
 		}
@@ -141,5 +168,6 @@ func (s *Store) SetWithTTL(key, value string, ttl time.Duration) bool {
 	e.hasExpiry = true
 	e.expiresAt = expiresAt
 	s.lru.MoveToFront(e.lruNode)
+	heap.Push(&s.expiryHeap, expiryItem{key: key, expiresAt: expiresAt})
 	return true
 }
