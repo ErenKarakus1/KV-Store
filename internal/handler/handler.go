@@ -59,3 +59,19 @@ func SetHandler(s *store.Store) gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{"key": key, "value": req.Value, "ttl": req.TTL})
 	}
 }
+
+func DeleteHandler(s *store.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		key := ctx.Param("key")
+		if key == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+			return
+		}
+		ok := s.Delete(key)
+		if !ok {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "key not found"})
+			return
+		}
+		ctx.Status(http.StatusNoContent)
+	}
+}
