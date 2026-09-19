@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/ErenKarakus1/KV-Store/internal/config"
 	"github.com/ErenKarakus1/KV-Store/internal/handler"
@@ -16,8 +17,15 @@ func main() {
 	if err != nil {
 		log.Fatal("invalid store capacity")
 	}
+	cleanupInterval, err := time.ParseDuration(cfg.CleanupInterval)
+	if err != nil {
+		log.Fatal("invalid cleanup interval")
+	}
 
 	s := store.NewStore(storeCapacity)
+
+	stopCleanup := s.StartCleanup(cleanupInterval)
+	defer stopCleanup()
 
 	router := gin.Default()
 

@@ -8,8 +8,9 @@ import (
 )
 
 type Config struct {
-	StoreCapacity string
-	Port          string
+	StoreCapacity   string
+	Port            string
+	CleanupInterval string
 }
 
 func LoadConfig() Config {
@@ -18,8 +19,9 @@ func LoadConfig() Config {
 		log.Fatal("Error loading .env file")
 	}
 	return Config{
-		StoreCapacity: getEnv("STORE_CAPACITY"),
-		Port:          getEnv("PORT"),
+		StoreCapacity:   getEnv("STORE_CAPACITY"),
+		Port:            getEnv("PORT"),
+		CleanupInterval: getEnv("CLEANUP_INTERVAL"),
 	}
 }
 
