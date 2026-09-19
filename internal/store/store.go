@@ -72,3 +72,15 @@ func (s *Store) Get(key string) (string, bool) {
 	delete(s.data, key)
 	return "", false
 }
+
+func (s *Store) Delete(key string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	e, ok := s.data[key]
+	if !ok {
+		return false
+	}
+	s.lru.Remove(e.lruNode)
+	delete(s.data, key)
+	return true
+}
