@@ -56,3 +56,19 @@ func (s *Store) Set(key, value string) {
 		s.lru.MoveToFront(currentEntry.lruNode)
 	}
 }
+
+func (s *Store) Get(key string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	e, ok := s.data[key]
+	if !ok {
+		return "", false
+	}
+	if !e.hasExpiry || e.expiresAt.After(time.Now()) {
+		s.lru.MoveToFront(e.lruNode)
+		return e.value, true
+	}
+	s.lru.Remove(e.lruNode)
+	delete(s.data, key)
+	return "", false
+}
