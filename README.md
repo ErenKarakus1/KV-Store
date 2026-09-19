@@ -23,15 +23,26 @@ flowchart LR
 
 ```text
 KV Store/
-├── cmd/
-│   └── server/
-├── internal/
-│   ├── config/
-│   ├── handler/
-│   ├── model/
-│   └── store/
-├── go.mod
-└── go.sum
+|-- cmd/
+|   `-- server/
+|       `-- main.go
+|-- internal/
+|   |-- config/
+|   |   `-- config.go
+|   |-- handler/
+|   |   |-- handler.go
+|   |   `-- handler_test.go
+|   |-- model/
+|   |   `-- model.go
+|   `-- store/
+|       |-- store.go
+|       `-- store_test.go
+|-- .env.example
+|-- .gitignore
+|-- go.mod
+|-- go.sum
+|-- LICENSE
+`-- README.md
 ```
 
 ## Components
