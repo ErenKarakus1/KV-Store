@@ -51,7 +51,7 @@ KV Store/
 
 Responsible for:
 
-* GET, SET, DELETE, and EXISTS operations
+* GET, SET, DELETE, EXISTS, and INCREMENT operations with optional TTL on SET
 * Optional TTL per key
 * Expired-key checks during reads
 * Expiry tracking with a min-heap
@@ -100,6 +100,7 @@ Responsible for:
 * Stale heap entries for simpler TTL updates
 * Configurable store capacity
 * LRU eviction
+* Atomic integer increment operation
 * JSON HTTP API
 * Concurrent store stress tests
 
@@ -222,6 +223,25 @@ Response:
 }
 ```
 
+### Increment Key
+
+```http
+POST /kv/:key/increment
+```
+
+Missing or expired keys are created with value `"1"`.
+
+Success:
+
+```json
+{
+  "key": "counter",
+  "value": "2"
+}
+```
+
+Non-integer values and integer overflow return `409 Conflict`.
+
 ### Delete Key
 
 ```http
@@ -267,6 +287,7 @@ On Windows, `go test -race` requires CGO and a C compiler such as GCC.
 * Background cleanup runs on a fixed interval instead of sleeping until the next expiry
 * There is no graceful HTTP shutdown yet
 * Values must be non-empty strings through the HTTP API
+* Increment only supports signed 64-bit integer strings
 * The HTTP API does not expose remaining TTL metadata
 
 ---
@@ -275,7 +296,7 @@ On Windows, `go test -race` requires CGO and a C compiler such as GCC.
 
 * Handler and store benchmarks
 * Persistence / snapshots
-* Atomic operations such as INCR and SETNX
+* Additional atomic operations such as SETNX
 * Metrics endpoint
 * Graceful HTTP shutdown
 * Sharding

@@ -16,6 +16,7 @@ func newTestRouter(s *store.Store) *gin.Engine {
 
 	r := gin.New()
 	r.GET("/kv/:key/exists", ExistsHandler(s))
+	r.POST("/kv/:key/increment", IncrementHandler(s))
 	r.GET("/kv/:key", GetHandler(s))
 	r.PUT("/kv/:key", SetHandler(s))
 	r.DELETE("/kv/:key", DeleteHandler(s))
@@ -123,5 +124,39 @@ func TestDeleteMissingKey(t *testing.T) {
 	w := performRequest(r, http.MethodDelete, "/kv/missing", "")
 	if w.Code != http.StatusNotFound {
 		t.Fatalf("DELETE missing status = %d; want %d; body=%s", w.Code, http.StatusNotFound, w.Body.String())
+	}
+}
+
+func TestIncrementHandler(t *testing.T) {
+	r := newTestRouter(store.NewStore(0))
+
+	w := performRequest(r, http.MethodPost, "/kv/counter/increment", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("first increment status = %d; want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), `"value":"1"`) {
+		t.Fatalf("first increment body = %s; want value 1", w.Body.String())
+	}
+
+	w = performRequest(r, http.MethodPost, "/kv/counter/increment", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("second increment status = %d; want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), `"value":"2"`) {
+		t.Fatalf("second increment body = %s; want value 2", w.Body.String())
+	}
+}
+
+func TestIncrementHandlerRejectsNonIntegerValue(t *testing.T) {
+	r := newTestRouter(store.NewStore(0))
+
+	w := performRequest(r, http.MethodPut, "/kv/name", `{"value":"eren"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("PUT status = %d; want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	w = performRequest(r, http.MethodPost, "/kv/name/increment", "")
+	if w.Code != http.StatusConflict {
+		t.Fatalf("increment non-integer status = %d; want %d; body=%s", w.Code, http.StatusConflict, w.Body.String())
 	}
 }

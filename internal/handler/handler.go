@@ -87,3 +87,19 @@ func ExistsHandler(s *store.Store) gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{"key": key, "exists": exists})
 	}
 }
+
+func IncrementHandler(s *store.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		key := ctx.Param("key")
+		if key == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+			return
+		}
+		incrementedValue, ok := s.Increment(key)
+		if !ok {
+			ctx.JSON(http.StatusConflict, gin.H{"error": "increment failed"})
+			return
+		}
+		ctx.JSON(http.StatusOK, gin.H{"key": key, "value": incrementedValue})
+	}
+}

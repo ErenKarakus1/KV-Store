@@ -3,6 +3,8 @@ package store
 import (
 	"container/heap"
 	"container/list"
+	"math"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -220,4 +222,42 @@ func (s *Store) StartCleanup(interval time.Duration) func() {
 	}()
 	var once sync.Once
 	return func() { once.Do(func() { close(done) }) }
+}
+
+func (s *Store) Increment(key string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	s.cleanupExpiredLocked(now)
+	e, ok := s.data[key]
+	if !ok || (e.hasExpiry && !e.expiresAt.After(now)) {
+		if ok {
+			s.deleteLocked(key)
+		}
+		node := s.lru.PushFront(key)
+		e := entry{
+			key:       key,
+			value:     "1",
+			hasExpiry: false,
+			lruNode:   node,
+		}
+		s.data[key] = &e
+		if s.capacity > 0 && len(s.data) > s.capacity {
+			s.evictLRULocked()
+		}
+		return "1", true
+	}
+	strValue := e.value
+	intValue, err := strconv.ParseInt(strValue, 10, 64)
+	if err != nil {
+		return "", false
+	}
+	if intValue == math.MaxInt64 {
+		return "", false
+	}
+	intValue++
+	updatedStrValue := strconv.FormatInt(intValue, 10)
+	e.value = updatedStrValue
+	s.lru.MoveToFront(e.lruNode)
+	return updatedStrValue, true
 }

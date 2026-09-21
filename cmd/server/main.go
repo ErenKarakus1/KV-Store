@@ -30,6 +30,7 @@ func main() {
 	router := gin.Default()
 
 	router.GET("/kv/:key/exists", handler.ExistsHandler(s))
+	router.POST("/kv/:key/increment", handler.IncrementHandler(s))
 	router.GET("/kv/:key", handler.GetHandler(s))
 	router.PUT("/kv/:key", handler.SetHandler(s))
 	router.DELETE("/kv/:key", handler.DeleteHandler(s))
