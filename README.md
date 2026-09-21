@@ -258,6 +258,19 @@ On Windows, `go test -race` requires CGO and a C compiler such as GCC.
 
 ---
 
+## Known Limitations
+
+* Data is stored only in memory and is lost when the process exits
+* No authentication, authorization, or rate limiting is implemented
+* The store uses a single mutex, so all operations are serialized
+* Expiry heap entries can become stale and remain until cleanup reaches them
+* Background cleanup runs on a fixed interval instead of sleeping until the next expiry
+* There is no graceful HTTP shutdown yet
+* Values must be non-empty strings through the HTTP API
+* The HTTP API does not expose remaining TTL metadata
+
+---
+
 ## Future Improvements
 
 * Handler and store benchmarks
