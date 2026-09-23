@@ -17,6 +17,7 @@ func newTestRouter(s *store.Store) *gin.Engine {
 	r := gin.New()
 	r.GET("/kv/:key/exists", ExistsHandler(s))
 	r.POST("/kv/:key/increment", IncrementHandler(s))
+	r.POST("/kv/:key/setnx", SetNXHandler(s))
 	r.GET("/kv/:key", GetHandler(s))
 	r.PUT("/kv/:key", SetHandler(s))
 	r.DELETE("/kv/:key", DeleteHandler(s))
@@ -158,5 +159,53 @@ func TestIncrementHandlerRejectsNonIntegerValue(t *testing.T) {
 	w = performRequest(r, http.MethodPost, "/kv/name/increment", "")
 	if w.Code != http.StatusConflict {
 		t.Fatalf("increment non-integer status = %d; want %d; body=%s", w.Code, http.StatusConflict, w.Body.String())
+	}
+}
+
+func TestSetNXHandler(t *testing.T) {
+	r := newTestRouter(store.NewStore(0))
+
+	w := performRequest(r, http.MethodPost, "/kv/name/setnx", `{"value":"eren"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("first setnx status = %d; want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	w = performRequest(r, http.MethodGet, "/kv/name", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("GET after setnx status = %d; want %d; body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), `"value":"eren"`) {
+		t.Fatalf("GET after setnx body = %s; want value eren", w.Body.String())
+	}
+
+	w = performRequest(r, http.MethodPost, "/kv/name/setnx", `{"value":"other"}`)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("second setnx status = %d; want %d; body=%s", w.Code, http.StatusConflict, w.Body.String())
+	}
+
+	w = performRequest(r, http.MethodGet, "/kv/name", "")
+	if !strings.Contains(w.Body.String(), `"value":"eren"`) {
+		t.Fatalf("GET after conflicting setnx body = %s; want original value eren", w.Body.String())
+	}
+}
+
+func TestSetNXHandlerRejectsInvalidRequests(t *testing.T) {
+	r := newTestRouter(store.NewStore(0))
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "invalid json", body: `{`},
+		{name: "missing value", body: `{}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := performRequest(r, http.MethodPost, "/kv/bad/setnx", tt.body)
+			if w.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d; want %d; body=%s", w.Code, http.StatusBadRequest, w.Body.String())
+			}
+		})
 	}
 }

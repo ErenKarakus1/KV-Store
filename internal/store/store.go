@@ -261,3 +261,28 @@ func (s *Store) Increment(key string) (string, bool) {
 	s.lru.MoveToFront(e.lruNode)
 	return updatedStrValue, true
 }
+
+func (s *Store) SetNX(key, value string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	s.cleanupExpiredLocked(now)
+	ent, ok := s.data[key]
+	if ok && (ent.hasExpiry && !ent.expiresAt.After(now)) {
+		s.deleteLocked(key)
+	} else if ok {
+		return false
+	}
+	node := s.lru.PushFront(key)
+	e := entry{
+		key:       key,
+		value:     value,
+		hasExpiry: false,
+		lruNode:   node,
+	}
+	s.data[key] = &e
+	if s.capacity > 0 && len(s.data) > s.capacity {
+		s.evictLRULocked()
+	}
+	return true
+}

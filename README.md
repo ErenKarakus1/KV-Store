@@ -51,7 +51,7 @@ KV Store/
 
 Responsible for:
 
-* GET, SET, DELETE, EXISTS, and INCREMENT operations with optional TTL on SET
+* GET, SET, SETNX, DELETE, EXISTS, and INCREMENT operations with optional TTL on SET
 * Optional TTL per key
 * Expired-key checks during reads
 * Expiry tracking with a min-heap
@@ -101,6 +101,7 @@ Responsible for:
 * Configurable store capacity
 * LRU eviction
 * Atomic integer increment operation
+* Conditional set-if-not-exists operation
 * JSON HTTP API
 * Concurrent store stress tests
 
@@ -242,6 +243,31 @@ Success:
 
 Non-integer values and integer overflow return `409 Conflict`.
 
+### Set If Not Exists
+
+```http
+POST /kv/:key/setnx
+```
+
+Request:
+
+```json
+{
+  "value": "hello"
+}
+```
+
+Success:
+
+```json
+{
+  "key": "name",
+  "value": "hello"
+}
+```
+
+Existing live keys return `409 Conflict` and are not overwritten.
+
 ### Delete Key
 
 ```http
@@ -288,6 +314,7 @@ On Windows, `go test -race` requires CGO and a C compiler such as GCC.
 * There is no graceful HTTP shutdown yet
 * Values must be non-empty strings through the HTTP API
 * Increment only supports signed 64-bit integer strings
+* SETNX does not currently support TTL
 * The HTTP API does not expose remaining TTL metadata
 
 ---
@@ -296,7 +323,7 @@ On Windows, `go test -race` requires CGO and a C compiler such as GCC.
 
 * Handler and store benchmarks
 * Persistence / snapshots
-* Additional atomic operations such as SETNX
+* Additional atomic operations
 * Metrics endpoint
 * Graceful HTTP shutdown
 * Sharding

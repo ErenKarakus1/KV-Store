@@ -103,3 +103,28 @@ func IncrementHandler(s *store.Store) gin.HandlerFunc {
 		ctx.JSON(http.StatusOK, gin.H{"key": key, "value": incrementedValue})
 	}
 }
+
+func SetNXHandler(s *store.Store) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		key := ctx.Param("key")
+		if key == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "key is required"})
+			return
+		}
+		var req model.SetNXRequest
+		if err := ctx.ShouldBindJSON(&req); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+			return
+		}
+		if req.Value == "" {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "value is required"})
+			return
+		}
+		ok := s.SetNX(key, req.Value)
+		if !ok {
+			ctx.JSON(http.StatusConflict, gin.H{"error": "key already exists"})
+			return
+		}
+		ctx.JSON(http.StatusOK, gin.H{"key": key, "value": req.Value})
+	}
+}
